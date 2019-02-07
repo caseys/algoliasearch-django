@@ -159,7 +159,7 @@ class AlgoliaEngine(object):
         adapter = self.get_adapter(model)
         adapter.clear_index()
 
-    def reindex_all(self, model, batch_size=1000):
+    def reindex_all(self, model, batch_size=1000, extra_models=None):
         """
         Reindex all the records.
 
@@ -168,7 +168,7 @@ class AlgoliaEngine(object):
         the performance (for example with select_related or prefetch_related).
         """
         adapter = self.get_adapter(model)
-        return adapter.reindex_all(batch_size)
+        return adapter.reindex_all(batch_size, extra_models)
 
     def reset(self, settings=None):
         """Reinitializes the Algolia engine and its client.

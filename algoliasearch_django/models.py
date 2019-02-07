@@ -421,7 +421,7 @@ class AlgoliaIndex(object):
             else:
                 logger.warning('%s NOT WAIT: %s', self.model, e)
 
-    def reindex_all(self, batch_size=1000):
+    def reindex_all(self, batch_size=1000, extra_models=None):
         """
         Reindex all the records.
 
@@ -478,26 +478,32 @@ class AlgoliaIndex(object):
             counts = 0
             batch = []
 
-            if hasattr(self, 'get_queryset'):
-                qs = self.get_queryset()
-            else:
-                qs = self.model.objects.all()
+            # Handle one or many models
+            self.models = [self.model]
+            if extra_models is not None:
+                self.models += extra_models
 
-            for instance in qs:
-                if not self._should_index(instance):
-                    continue  # should not index
+            for model in self.models:
+                if hasattr(self, 'get_queryset'):
+                    qs = self.get_queryset()
+                else:
+                    qs = model.objects.all()
 
-                batch.append(self.get_raw_record(instance))
-                if len(batch) >= batch_size:
+                for instance in qs:
+                    if not self._should_index(instance):
+                        continue  # should not index
+
+                    batch.append(self.get_raw_record(instance))
+                    if len(batch) >= batch_size:
+                        self.__tmp_index.save_objects(batch)
+                        logger.info('SAVE %d OBJECTS TO %s_tmp', len(batch),
+                                    self.index_name)
+                        batch = []
+                    counts += 1
+                if len(batch) > 0:
                     self.__tmp_index.save_objects(batch)
                     logger.info('SAVE %d OBJECTS TO %s_tmp', len(batch),
                                 self.index_name)
-                    batch = []
-                counts += 1
-            if len(batch) > 0:
-                self.__tmp_index.save_objects(batch)
-                logger.info('SAVE %d OBJECTS TO %s_tmp', len(batch),
-                            self.index_name)
 
             self.__client.move_index(self.__tmp_index.index_name,
                                      self.__index.index_name)
